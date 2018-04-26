@@ -73,7 +73,7 @@
 			//CharacterMoveComp->SetMovementMode(MOVE_);
 			float distanceUp = Path->GetPathPoints()[MoveSegmentStartIndex + 1].Location.Z - SegmentStart.Location.Z;
 			float distanceForward = Dist(&Path->GetPathPoints()[MoveSegmentStartIndex + 1].Location, &SegmentStart.Location);
-			CharacterMoveComp->JumpZVelocity = (distanceForward + distanceUp) *1.75;
+			CharacterMoveComp->JumpZVelocity = distanceUp;//(distanceForward + distanceUp) *1.25;
 			FVector location = Path->GetPathPoints()[MoveSegmentStartIndex].Location;
 			FVector destination = Path->GetPathPoints()[MoveSegmentStartIndex + 1].Location; 
 			FVector direction(destination.X - location.X, destination.Y - location.Y, 0);

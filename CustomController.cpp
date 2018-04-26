@@ -17,11 +17,12 @@
 	 perception = CreateDefaultSubobject<UAIPerceptionComponent>(TEXT("Perception")); 
 	 sight = CreateDefaultSubobject<UAISenseConfig_Sight>(TEXT("sight"));
 	 SetPerceptionComponent(*perception); 
+
 	 if (perception)
 	 {
 		 perception->ConfigureSense(*sight);
 		 perception->SetDominantSense(sight->GetSenseImplementation());
-		 decisions = new CDecisionClass(perception);
+		 decisions = new CDecisionClass(perception, this);
 		 //animAttack =      &decisions->aniAttack; 
 		 //animDie =         &decisions->aniDie; 
 		 //animFoundFoe =    &decisions->aniFoundFoe; 
@@ -30,7 +31,7 @@
 	 }
 	 else 
 		 UE_LOG(LogTemp, Warning, TEXT("Failed to create UAIPerceptionComponent"));
-
+	  
 	 Tags.Add("CAI"); 
  }
 
@@ -50,6 +51,7 @@
  {
 	 Super::Possess(InPawn);
 	 OnPossess(InPawn);
+	 startPos = GetPawn()->GetActorLocation();
  }
 
  void ACustomController::OnPossess(APawn * In)
@@ -69,6 +71,8 @@
 			 perception->ConfigureSense(*sight);
 		 }
 	 }
+	 startPos = GetCharacter()->GetActorLocation();
+
  }
 
  void ACustomController::PerceptionUpdated(const TArray<AActor*>& Actors)
@@ -77,7 +81,7 @@
 	 {
 		 UE_LOG(LogTemp, Warning, TEXT("See: %s"), *Actors[i]->GetName());
 	 }
-	 attention = decisions->UpdateVision(Actors, this); 
+	 attention = decisions->UpdateVision(Actors); 
 	 if (attention)
 	 {
 		 UE_LOG(LogTemp, Warning, TEXT("IsPayingAttentionTo: %s"), *attention->GetName());
@@ -94,7 +98,59 @@
 
  void ACustomController::Tick(float DeltaTime)
  {
-	 status = IntToEnum(decisions->Update((int)status));
+	 Super::Tick(DeltaTime); 
+	 EStatusEnum tempStatus = IntToEnum(decisions->Update((int)status));
+	 if (currentlyAnimated)
+		 return;
+	 //if (GetCharacter()->GetVelocity().IsNearlyZero(10))
+		// timeStill += DeltaTime;
+	 //if (timeStill == 4 && status != EStatusEnum::SE_IDLE)
+	 //{
+		// MoveToLocation(startPos);
+		// timeStill = 0;
+		// UE_LOG(LogTemp, Warning, TEXT("Held still too long, moving back"));
+		// tempStatus = EStatusEnum::SE_IDLE;
+	 //}
+	// if (status == EStatusEnum::SE_REVIVE && )
+	 if (tempStatus == status)
+		 return; 
+
+
+
+	 status = tempStatus; 
+	 //Do the status thing if status has changed
+	 switch (status)
+	 {
+	 case EStatusEnum::SE_IDLE:
+		 break;
+	 case EStatusEnum::SE_CHARGE:
+		 MoveToActor(attention);
+		 break;
+	 case EStatusEnum::SE_DOWNED:
+		 StopMovement(); 
+		 break;
+	 case EStatusEnum::SE_DEAD:
+		 StopMovement(); 
+		 break;
+	 case EStatusEnum::SE_CHASE:
+		 MoveToActor(attention); 
+		 break;
+	 case EStatusEnum::SE_ENGAGED:
+		 break;
+	 case EStatusEnum::SE_REVIVE:
+		 MoveToActor(decisions->GetFriendRef());
+		 break;
+	 case EStatusEnum::SE_EMOTING:
+		 break;
+	 case EStatusEnum::SE_ATTACK:
+		 status = EStatusEnum::SE_CHASE; 
+		 break;
+	 case EStatusEnum::SE_STALK:
+		 MoveToActor(attention);
+		 break;
+	 default:
+		 break;
+	 }
  }
 
  EStatusEnum ACustomController::IntToEnum(int num)
@@ -123,7 +179,7 @@
 		 return EStatusEnum::SE_REVIVE;
 		 break;
 	 case 7:
-		 return EStatusEnum::SE_FOUNDFOE;
+		 return EStatusEnum::SE_EMOTING;
 		 break;
 	 case 8:
 		 return EStatusEnum::SE_ATTACK;
@@ -247,7 +303,7 @@
 		 CNode* bestNode = m_openList->pop();
 		 FVector ballpos;
 		 Add(&ballpos, &bestNode->pos, &up);
-		 //spawnBall(ballpos, FColor().Blue); ///< Spawn ball here to show all nodes traversed
+		 spawnBall(ballpos, FColor().Yellow); ///< Spawn ball here to show all nodes traversed
 		 bestNode->flags = NODE_CLOSED;
 
 		 //Path has been found
@@ -278,7 +334,7 @@
 					
                  //}
 				 
-				//spawnBall(tempPath[i], FColor().Blue); ///< Spawn ball here to show path found
+				spawnBall(tempPath[i], FColor().Green); ///< Spawn ball here to show path found
 			 }
 			 pathPoints.Add(endLoc);
 			 break;
@@ -338,7 +394,7 @@
 				 nodeRef->total = nodeRef->cost + Dist(&nodeRef->pos, &endLoc);
 				 m_openList->push(nodeRef);
 				 nodeRef->flags = NODE_OPEN;
-				 //spawnBall(nodeRef->pos, FColor().Blue); ///< Spawn ball here to show all visited nodes
+				 spawnBall(nodeRef->pos, FColor().Red); ///< Spawn ball here to show all visited nodes
 			 }
 		 }
 		 // hasFoundNextLink = true; 
@@ -435,16 +491,18 @@
  {
 	 // FActorSpawnParameters spawnInfo;
 	 // spawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	 UE_LOG(LogTemp, Warning, TEXT("Spawned Sphere"));
-	 ABall* ball = GetWorld()->SpawnActorDeferred<ABall>(ABall::StaticClass(), FTransform(FVector(loc.X, loc.Y + 5, loc.Z)));
-	 ball->Colour(colour);
-	 ball->FinishSpawning(FTransform(FVector(loc.X, loc.Y + 5, loc.Z)));
+	 //UE_LOG(LogTemp, Warning, TEXT("Spawned Sphere"));
+	 DrawDebugSphere(GetWorld(), loc, 24.0f, 4.0f, colour, true); 
+	// ABall* ball = GetWorld()->SpawnActorDeferred<ABall>(ABall::StaticClass(), FTransform(FVector(loc.X, loc.Y + 5, loc.Z)));
+	// ball->Colour(colour);
+	// ball->FinishSpawning(FTransform(FVector(loc.X, loc.Y + 5, loc.Z)));
  }
 
  void ACustomController::DeleteAllBalls() const
  {
 	 for (TActorIterator<ABall> ActorItr(GetWorld()); ActorItr; ++ActorItr)
 		 ActorItr->Destroy(); 
+	 FlushPersistentDebugLines(GetWorld()); 
  }
 
 
@@ -467,17 +525,21 @@
 	 //Ignore Actors
 	 TraceParams.AddIgnoredActors(ActorsToIgnore);
 	 //Check distance between poly and all other polys and return closest
-	 for (int i = 0; i < polyPool.Num(); i++)
+	 
+	 
 		 //If within distance
+		 //int distance = (Dist(&m_nodePool->getNodeAtPoly(polyPool[i])->pos, &m_nodePool->getNodeAtPoly(PolyID)->pos));
+		 //UE_LOG(LogTemp, Warning, TEXT("Distance: %i"), distance);
+	 for (int i = 0; i < polyPool.Num(); i++)
 		 if ((Dist(&m_nodePool->getNodeAtPoly(polyPool[i])->pos, &m_nodePool->getNodeAtPoly(PolyID)->pos) < searchDistance))
 		 { //and nothing between points
 			 GetWorld()->LineTraceSingleByChannel(hitOut, m_nodePool->getNodeAtPoly(polyPool[i])->pos, m_nodePool->getNodeAtPoly(PolyID)->pos, ECC_Pawn, TraceParams);
-			 if (hitOut.GetActor() == NULL || !FVector((m_nodePool->getNodeAtPoly(polyPool[i])->pos - m_nodePool->getNodeAtPoly(PolyID)->pos).Z).IsNearlyZero(30)) 
-					 //and not node making query
-					 if (polyPool[i] != PolyID)
-						 Neighbors.Add(m_nodePool->getNodeAtPoly(polyPool[i]));
+			 if (hitOut.GetActor() == NULL || !FVector((m_nodePool->getNodeAtPoly(polyPool[i])->pos - m_nodePool->getNodeAtPoly(PolyID)->pos).Z).IsNearlyZero(30))
+				 //and not node making query
+				 if (polyPool[i] != PolyID)
+					 Neighbors.Add(m_nodePool->getNodeAtPoly(polyPool[i]));
 		 }
-		
+	 
 	 if (Neighbors.Num() == 0)
 		 return false; 
 

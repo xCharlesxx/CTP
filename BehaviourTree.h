@@ -81,35 +81,46 @@ public:
 	{
 	private:
 		const int* alState; 
+		const int* plState;
 	public:
-		AllyState(const int* allystate) : alState(allystate) {}
+		AllyState(const int* allystate, const int* playerState) : alState(allystate), plState(playerState) {}
 	private:
 		virtual int run() override
 		{
 			switch (*alState)
 			{
-				//Downed
+			//Downed
 			case 2:
 				//Revive
 				return 6;
 				break;
-				//Dead
+			//Dead
 			case 3:
 				//Chase
 				return 4;
 				break; 
-				//Engaged
+			//Engaged
 			case 5:
 				//Charge
 				return 1;
 				break;
-				//FoundFoe
+			//Emoting
 			case 7: 
-				//Stalk
-				return 9;
+				//Stalk if we're both emoting
+				if (*plState == 7)
+					return 9;
+				else
+				//Continue emoting
+					return *plState;
+				break;
+			//Stalking
+			case 9: 
+				//Emote 
+				return 7; 
 				break;
 			default:
-				return 0;
+				//Else remain in state
+				return *plState;
 				break;
 			}
 		}

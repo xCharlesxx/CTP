@@ -7,6 +7,7 @@
 #include "Engine/World.h"
 #include "CPathFollowComponent.h"
 #include "Ball.h"
+#include "DrawDebugHelpers.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
 #include "Perception/AISense_Sight.h"
@@ -22,7 +23,7 @@ enum class EStatusEnum : uint8
 	SE_CHASE    UMETA(DisplayName = "Chasing"),
 	SE_ENGAGED  UMETA(DisplayName = "Engaged"),
 	SE_REVIVE   UMETA(DisplayName = "Reviving"),
-	SE_FOUNDFOE UMETA(DisplayName = "FoundFoe"),
+	SE_EMOTING  UMETA(DisplayName = "Emoting"),
 	SE_ATTACK   UMETA(DisplayName = "Attacking"),
 	SE_STALK    UMETA(DisplayName = "Stalking")
 };
@@ -40,13 +41,13 @@ public:
 	virtual void FindPathForMoveRequest(const FAIMoveRequest& MoveRequest, FPathFindingQuery& Query, FNavPathSharedPtr& OutPath) const override;
 	FPathFindingResult FindPath(const FPathFindingQuery& Query) const;
 	UAIPerceptionComponent* perceptionComponent = GetAIPerceptionComponent(); 
-
 	void BeginPlay() override;
 	void Possess(APawn* InPawn) override;
 	void OnPossess(APawn* In);
 	class CDecisionClass* decisions;
 	UAIPerceptionComponent* perception;
 	UAISenseConfig_Sight* sight;
+	UCPathFollowComponent* pathFollowComp; 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Enum)
 	EStatusEnum status = EStatusEnum::SE_IDLE; 
 	UFUNCTION()
@@ -61,6 +62,8 @@ private:
 	bool GetAllPolys(TArray<NavNodeRef>& Polys) const;
 	void DeleteAllBalls() const; 
 	EStatusEnum IntToEnum(int num); 
+	float timeStill = 0;
+	FVector startPos; 
 private: 
 
 
@@ -97,8 +100,8 @@ public:
 	//	bool* animFoundFriend;
 	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Animations)
 	//	bool* animFoundFoe;
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Animations)
-	//	float animFoePitchDir = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animations)
+		bool currentlyAnimated;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Animations)
 		AActor* attention = nullptr;
 };
@@ -145,4 +148,3 @@ struct CPoly
 	/// Gets the polygon type. (See: #PolyTypes)
 	inline unsigned char getType() const { return areaAndtype >> 6; }
 };
-

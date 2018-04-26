@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "BehaviourTree.h"
 #include "CMath.h"
+
 #include "Perception/AIPerceptionComponent.h"
 #include "Blueprint/AIBlueprintHelperLibrary.h"
 
@@ -15,10 +16,11 @@ class CDecisionClass
 	
 public:	
 	// Sets default values for this actor's properties
-	CDecisionClass(UAIPerceptionComponent* perceptionComponent);
+	CDecisionClass(UAIPerceptionComponent* perceptionComponent, const AActor* self);
 	UAIPerceptionComponent* perceptionComponent;// = GetAIPerceptionComponent();
-	AActor* UpdateVision(const TArray<AActor*>& Actors, const AActor* self);
+	AActor* UpdateVision(const TArray<AActor*>& Actors);
 	int Update(const int status);
+	AActor* GetFriendRef() { if (friends.Num() > 0) return friends[0]; return nullptr; };
 	//bool aniAttack = false;
 	//bool aniDie = false;
 	//bool aniWounded = false;
@@ -36,8 +38,11 @@ private:
 	bool hostileVisible = false; 
 	FVector lastKnownVector; 
 	FVector searchVector; 
+	FString BTSuccess = "Not yet Run";
+	class ACustomController* mySelf; 
 	//EStatusEnum* status; 
 	int alyState = 0; 
+	int myState = 0; 
 private:
 	//UAIBlueprintHelperLibrary::GetBlackboard(0);
 	// Called every frame
